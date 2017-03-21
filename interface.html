@@ -1,0 +1,130 @@
+<!-- My API for GoogleMaps:  AIzaSyDK79n2bQNB4OJpu9qXE1CP91YgNg7WusI  -->
+<html>
+  <head>
+  </head>
+  <body onload="document.getElementById('the-actual-drop-box').value = 'none';">
+    <div id="map" style="width: 1200px; height: 1200px;"></div>
+    <div id="info-box" style="background-color: white; border: 1px solid black; width: 480px; height: 20px; padding: 10px; position: absolute; top: 30px; left: 1230px">?</div>
+    <div id="info-pic" style="background-color: white; width: 500px; position: absolute; top: 100px; left: 1230px"><img id="the-img" style="width: 500px"/></div>
+    <div id="curr-house" style="background-color: white; border: 1px solid black; width: 320px; height: 20px; padding: 10px; position: absolute; top: 800px; left: 1390px">?</div>
+    <div id="curr-house-text" style="background-color: white; width: 130px; height: 20px; padding: 10px; position: absolute; top: 800px; left: 1230px">Current:</div>
+    <div id="curr-nhood" style="background-color: white; border: 1px solid black; width: 320px; height: 20px; padding: 10px; position: absolute; top: 850px; left: 1390px">?</div>
+    <div id="curr-nhood-text" style="background-color: white; width: 130px; height: 20px; padding: 10px; position: absolute; top: 850px; left: 1230px">Neighborhood:</div>
+    <div id="crime-box" style="background-color: white; border: 1px solid black; width: 320px; height: 20px; padding: 10px; position: absolute; top: 900px; left: 1390px">?</div>
+    <div id="crime-text" style="background-color: white; width: 130px; height: 20px; padding: 10px; position: absolute; top: 900px; left: 1230px">Crimes:</div>
+    <div id="complaints-box" style="background-color: white; border: 1px solid black; width: 320px; height: 20px; padding: 10px; position: absolute; top: 950px; left: 1390px">?</div>
+    <div id="curr-house-text" style="background-color: white; width: 130px; height: 20px; padding: 10px; position: absolute; top: 950px; left: 1230px">Complaints:</div>
+    <div id="violations-box" style="background-color: white; border: 1px solid black; width: 320px; height: 20px; padding: 10px; position: absolute; top: 1000px; left: 1390px">?</div>
+    <div id="curr-house-text" style="background-color: white; width: 130px; height: 20px; padding: 10px; position: absolute; top: 1000px; left: 1230px">Violations:</div>
+    <div id="drop-box-text" style="background-color: white; width: 130px; height: 20px; padding: 10px; position: absolute; top: 1050px; left: 1230px">Filter:</div>
+    <div id="drop-box" style="background-color: white; width: 320px; height: 20px; padding: 5px; position: absolute; top: 1050px; left: 1390px">
+      <select id="the-actual-drop-box" onchange="setFilter(this.options[this.selectedIndex].value);">
+	<option value="none" selected="selected">None</option>
+	<option value="crime">Crime</option>
+	<option value="complaints">Complaints</option>
+	<option value="violations">Violations</option>
+      </select>
+    </div>
+        
+    <script>
+      var map;
+      var nhoodLayer;
+      var parcelLayer;
+      var polys = [];
+      
+      function initMap() {
+      map_options = {
+      zoom: 12,
+      mapTypeId: 'roadmap',
+      center: {lat: 42.35, lng: -83.1}
+      }
+
+      map_elt = document.getElementById('map');
+
+      map = new google.maps.Map(map_elt, map_options);
+
+      nhoodLayer = new google.maps.Data();
+      parcelLayer = new google.maps.Data();
+
+      nhoodLayer.setMap(map);
+      parcelLayer.setMap(map);
+      
+      nhoodLayer.loadGeoJson('neighborhoods.json');
+      parcelLayer.loadGeoJson('parcels.json');
+
+      nhoodLayer.setStyle(function(feature) {
+      return {
+      clickable: false,
+      fillColor: '#ffffff',
+      fillOpacity: 0.0,
+      strokeWeight: 1,
+      zIndex: 1
+      };
+      });
+      
+      parcelLayer.setStyle(function(feature) {
+      var color = 'black';
+      if (feature.getProperty('isClicked')) color = 'darkred';
+      return {
+      clickable: true,
+      fillColor: '#777777',
+      strokeWeight: 3,
+      strokeColor: color,
+      zIndex: 2
+      };
+      });
+
+      parcelLayer.addListener('mouseover', function(event) {
+      document.getElementById('info-box').textContent = event.feature.getProperty('f1');
+      parcelLayer.revertStyle();
+      parcelLayer.overrideStyle(event.feature, {strokeColor: 'darkred'});
+      });
+
+      parcelLayer.addListener('mouseout', function(event) {
+      parcelLayer.revertStyle();
+      });
+      
+      parcelLayer.addListener('click', function(event) {
+      parcelLayer.forEach(function(feature) {
+      feature.setProperty('isClicked', false);
+      });
+      event.feature.setProperty('isClicked', true);
+      document.getElementById('curr-house').textContent = event.feature.getProperty('f1');
+      document.getElementById('the-img').src = event.feature.getProperty('f5');
+      document.getElementById('crime-box').textContent = event.feature.getProperty('f2');
+      document.getElementById('complaints-box').textContent = event.feature.getProperty('f3');
+      document.getElementById('violations-box').textContent = event.feature.getProperty('f4');
+      document.getElementById('curr-nhood').textContent = event.feature.getProperty('f6');
+      });
+      };
+
+      function setFilter(val) {
+      nhoodLayer.setStyle(function(feature) {
+      if (val == 'none') {
+      return {
+      clickable: false,
+      fillColor: '#ffffff',
+      fillOpacity: 0.0,
+      strokeWeight: 1
+      };
+      } else {
+      var color;
+      if (val == 'crime') color = feature.getProperty('f2');
+      if (val == 'complaints') color = feature.getProperty('f3');
+      if (val == 'violations') color = feature.getProperty('f4');
+      return {
+      clickable: false,
+      fillColor: color,
+      fillOpacity: 0.5,
+      strokeWeight: 1
+      };
+      };
+      });
+      };
+    </script>
+    
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDK79n2bQNB4OJpu9qXE1CP91YgNg7WusI&callback=initMap"></script>
+
+    
+  </body>
+</html>
